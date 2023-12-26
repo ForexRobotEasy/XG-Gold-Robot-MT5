@@ -1,0 +1,150 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                         XG Gold Robot MT5        |
+//|                   Developer's site: forexroboteasy.com           |
+//|                        Development: Forex Robot Easy Team        |
+//+------------------------------------------------------------------+
+
+// Global variables
+input double riskPercentage = 2; // Risk percentage for position sizing
+input double stopLossPips = 100; // Stop loss in pips
+input double takeProfitPips = 200; // Take profit in pips
+input double trailingStopPips = 50; // Trailing stop in pips
+
+// Indicator handles
+int goldIndicatorHandle;
+int customIndicator1Handle;
+int customIndicator2Handle;
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    // Initialize indicator handles
+    goldIndicatorHandle = iCustom(NULL, 0, 'XG_Gold_Indicator');
+    customIndicator1Handle = iCustom(NULL, 0, 'Custom_Indicator_1');
+    customIndicator2Handle = iCustom(NULL, 0, 'Custom_Indicator_2');
+
+    // Check if indicators are loaded successfully
+    if (goldIndicatorHandle == INVALID_HANDLE || customIndicator1Handle == INVALID_HANDLE || customIndicator2Handle == INVALID_HANDLE)
+    {
+        Print('Failed to load indicators');
+        return INIT_FAILED;
+    }
+
+    // Set chart indicator levels
+    ChartSetInteger(0, CHART_SHOW_PRICE_SCALE, false);
+    ChartSetInteger(0, CHART_SHOW_DATE_SCALE, false);
+
+    return INIT_SUCCEEDED;
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator deinitialization function                       |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+    // Remove chart indicator levels
+    ChartSetInteger(0, CHART_SHOW_PRICE_SCALE, true);
+    ChartSetInteger(0, CHART_SHOW_DATE_SCALE, true);
+}
+
+//+------------------------------------------------------------------+
+//| Expert advisor start function                                     |
+//+------------------------------------------------------------------+
+void OnTick()
+{
+    double lotSize = calculateLotSize(); // Calculate lot size based on risk percentage
+    double stopLossPrice = Ask - stopLossPips * _Point; // Calculate stop loss price
+    double takeProfitPrice = Ask + takeProfitPips * _Point; // Calculate take profit price
+    double trailingStopPrice = Ask - trailingStopPips * _Point; // Calculate trailing stop price
+
+    // Check if conditions for entering a buy trade are met
+    if (checkBuyConditions())
+    {
+        // Open a buy trade with calculated lot size, stop loss, and take profit levels
+        if (OrderSend(Symbol(), OP_BUY, lotSize, Ask, 3, stopLossPrice, takeProfitPrice, 'Buy Order', MagicNumber, 0, Blue))
+        {
+            Print('Buy order executed successfully');
+        }
+        else
+        {
+            Print('Failed to execute buy order: ', GetLastError());
+        }
+    }
+
+    // Check if conditions for entering a sell trade are met
+    if (checkSellConditions())
+    {
+        // Open a sell trade with calculated lot size, stop loss, and take profit levels
+        if (OrderSend(Symbol(), OP_SELL, lotSize, Bid, 3, stopLossPrice, takeProfitPrice, 'Sell Order', MagicNumber, 0, Red))
+        {
+            Print('Sell order executed successfully');
+        }
+        else
+        {
+            Print('Failed to execute sell order: ', GetLastError());
+        }
+    }
+
+    // Check if there are any open positions
+    if (OrdersTotal() > 0)
+    {
+        // Loop through all open positions
+        for (int i = 0; i < OrdersTotal(); i++)
+        {
+            if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+            {
+                // Check if the position is in profit
+                if (OrderProfit() > 0)
+                {
+                    // Modify the stop loss level to the trailing stop
+                    if (OrderStopLoss() < trailingStopPrice)
+                    {
+                        if (OrderModify(OrderTicket(), OrderOpenPrice(), trailingStopPrice, OrderTakeProfit(), 0, Green))
+                        {
+                            Print('Trailing stop modified successfully');
+                        }
+                        else
+                        {
+                            Print('Failed to modify trailing stop: ', GetLastError());
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Function to calculate the lot size based on risk percentage       |
+//+------------------------------------------------------------------+
+double calculateLotSize()
+{
+    double accountSize = AccountBalance();
+    double riskAmount = accountSize * riskPercentage / 100;
+    double lotSize = riskAmount / stopLossPips / _Point / SymbolInfoDouble(Symbol(), SYMBOL_TRADE_TICK_VALUE);
+
+    return NormalizeDouble(lotSize, 2);
+}
+
+//+------------------------------------------------------------------+
+//| Function to check the buy conditions                              |
+//+------------------------------------------------------------------+
+bool checkBuyConditions()
+{
+    // Implement the buy conditions using the specified indicators
+
+    return true; // Replace with actual conditions
+}
+
+//+------------------------------------------------------------------+
+//| Function to check the sell conditions                             |
+//+------------------------------------------------------------------+
+bool checkSellConditions()
+{
+    // Implement the sell conditions using the specified indicators
+
+    return true; // Replace with actual conditions
+}
